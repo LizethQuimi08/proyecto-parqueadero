@@ -15,7 +15,10 @@ on:
       - reopened
     branches:
       - main
-      - develop
+      - dev
+      - test
+      - "feature/**"
+
 
 permissions:
   contents: read
