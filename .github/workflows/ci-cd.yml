@@ -232,21 +232,45 @@ jobs:
       - deploy
     if: always()
     steps:
+      - uses: actions/checkout@v4
+
       - name: Build message
         id: msg
         shell: bash
         run: |
-          STATUS="success"
+          STATUS="✅ EXITOSO"
           for result in "${{ needs.java.result }}" "${{ needs.node.result }}" "${{ needs.frontend.result }}" "${{ needs.sonarcloud.result }}" "${{ needs.docker.result }}" "${{ needs.deploy.result }}"; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              STATUS="failure"
+              STATUS="❌ FALLIDO"
             fi
           done
-          echo "text=CI/CD ${STATUS} - repo ${{ github.repository }} - branch ${{ github.ref_name }} - commit ${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - name: Send Telegram message
-        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
-            -d text="${{ steps.msg.outputs.text }}"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+
+          TEXT="━━━━━━━━━━━━━━━━━━━━
+          🅿️ Sistema de Parqueadero CI/CD
+          ━━━━━━━━━━━━━━━━━━━━
+          Estado: ${STATUS}
+          Rama: ${{ github.ref_name }}
+          Autor: ${{ github.actor }}
+          Commit: ${COMMIT_MSG}
+          ─────────────────────
+          Java Tests: ${{ needs.java.result }}
+          NestJS Tests: ${{ needs.node.result }}
+          Frontend: ${{ needs.frontend.result }}
+          SonarCloud: ${{ needs.sonarcloud.result }}
+          Docker: ${{ needs.docker.result }}
+          Deploy: ${{ needs.deploy.result }}
+          ━━━━━━━━━━━━━━━━━━━━
+          🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+                    echo "text<<EOF" >> "$GITHUB_OUTPUT"
+                    echo "$TEXT" >> "$GITHUB_OUTPUT"
+                    echo "EOF" >> "$GITHUB_OUTPUT"
+
+                - name: Send Telegram message
+                  if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+                  run: |
+                    curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                      --data-urlencode chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+                      --data-urlencode text="${{ steps.msg.outputs.text }}"
