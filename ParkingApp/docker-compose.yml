@@ -121,7 +121,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgrest
       DB_PORT: 5432
       DB_USUARIO: postgrest
       DB_CONTRASENA: qwerty12
@@ -149,7 +149,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgrest
       DB_PORT: 5432
       DB_USER: postgrest
       DB_PASSWORD: qwerty12
@@ -177,7 +177,7 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
-      DB_HOST: postgres
+      DB_HOST: postgrest
       DB_PORT: 5432
       DB_USUARIO: postgrest
       DB_CONTRASENA: qwerty12
