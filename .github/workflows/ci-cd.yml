@@ -237,40 +237,49 @@ jobs:
       - name: Build message
         id: msg
         shell: bash
+        env:
+          JAVA_RESULT: ${{ needs.java.result }}
+          NODE_RESULT: ${{ needs.node.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          SONAR_RESULT: ${{ needs.sonarcloud.result }}
+          DOCKER_RESULT: ${{ needs.docker.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          AUTHOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          STATUS="✅ EXITOSO"
-          for result in "${{ needs.java.result }}" "${{ needs.node.result }}" "${{ needs.frontend.result }}" "${{ needs.sonarcloud.result }}" "${{ needs.docker.result }}" "${{ needs.deploy.result }}"; do
+          STATUS="EXITOSO"
+          for result in "$JAVA_RESULT" "$NODE_RESULT" "$FRONTEND_RESULT" "$SONAR_RESULT" "$DOCKER_RESULT" "$DEPLOY_RESULT"; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              STATUS="❌ FALLIDO"
+              STATUS="FALLIDO"
             fi
           done
 
           COMMIT_MSG=$(git log -1 --pretty=%s)
 
-          TEXT="━━━━━━━━━━━━━━━━━━━━
-          🅿️ Sistema de Parqueadero CI/CD
-          ━━━━━━━━━━━━━━━━━━━━
-          Estado: ${STATUS}
-          Rama: ${{ github.ref_name }}
-          Autor: ${{ github.actor }}
-          Commit: ${COMMIT_MSG}
-          ─────────────────────
-          Java Tests: ${{ needs.java.result }}
-          NestJS Tests: ${{ needs.node.result }}
-          Frontend: ${{ needs.frontend.result }}
-          SonarCloud: ${{ needs.sonarcloud.result }}
-          Docker: ${{ needs.docker.result }}
-          Deploy: ${{ needs.deploy.result }}
-          ━━━━━━━━━━━━━━━━━━━━
-          🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TEXT=$(printf '%s\n' \
+            "Sistema de Parqueadero CI/CD" \
+            "Estado: ${STATUS}" \
+            "Rama: ${BRANCH_NAME}" \
+            "Autor: ${AUTHOR}" \
+            "Commit: ${COMMIT_MSG}" \
+            "----------------------" \
+            "Java Tests: ${JAVA_RESULT}" \
+            "NestJS Tests: ${NODE_RESULT}" \
+            "Frontend: ${FRONTEND_RESULT}" \
+            "SonarCloud: ${SONAR_RESULT}" \
+            "Docker: ${DOCKER_RESULT}" \
+            "Deploy: ${DEPLOY_RESULT}" \
+            "Link: https://github.com/${REPO}/actions/runs/${RUN_ID}")
 
-                    echo "text<<EOF" >> "$GITHUB_OUTPUT"
-                    echo "$TEXT" >> "$GITHUB_OUTPUT"
-                    echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "text<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$TEXT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-                - name: Send Telegram message
-                  if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
-                  run: |
-                    curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                      --data-urlencode chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
-                      --data-urlencode text="${{ steps.msg.outputs.text }}"
+      - name: Send Telegram message
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode text="${{ steps.msg.outputs.text }}"
