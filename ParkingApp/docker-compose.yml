@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: parking-postgres
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: postgrest
       POSTGRES_PASSWORD: qwerty12
       POSTGRES_DB: parking_db
       POSTGRES_MULTIPLE_DATABASES: parking_db,usuarios_db,zonas_db,audit_db
@@ -74,7 +74,7 @@ services:
       - "8082:8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/usuarios_db
-      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_USERNAME: postgrest
       SPRING_DATASOURCE_PASSWORD: qwerty12
       OAUTH_SERVER_URL: http://localhost:8082
       RABBITMQ_HOST: rabbitmq
@@ -98,7 +98,7 @@ services:
       - "8081:8081"
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/zonas_db
-      DB_USERNAME: postgres
+      DB_USERNAME: postgrest
       DB_PASSWORD: qwerty12
       JWK_SET_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
       RABBITMQ_HOST: rabbitmq
@@ -123,7 +123,7 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USUARIO: postgres
+      DB_USUARIO: postgrest
       DB_CONTRASENA: qwerty12
       DB_NOMBRE: parking_db
       RABBITMQ_HOST: rabbitmq
@@ -151,7 +151,7 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: postgres
+      DB_USER: postgrest
       DB_PASSWORD: qwerty12
       DB_NAME: audit_db
       RABBITMQ_HOST: rabbitmq
