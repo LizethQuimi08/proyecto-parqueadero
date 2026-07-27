@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../ParkingApp/k8s
+
+images:
+  - name: ghcr.io/OWNER/REPOSITORY/kong
+    newName: parking/kong
+    newTag: local
+  - name: ghcr.io/OWNER/REPOSITORY/postgres
+    newName: parking/postgres
+    newTag: local
+  - name: ghcr.io/OWNER/REPOSITORY/rabbitmq
+    newName: parking/rabbitmq
+    newTag: local
+
+patches:
+  - target:
+      kind: Deployment
+      name: kong
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: rabbitmq
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never

@@ -1,0 +1,209 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    container_name: parking-postgres
+    environment:
+      POSTGRES_USER: postgrest
+      POSTGRES_PASSWORD: qwerty12
+      POSTGRES_DB: parking_db
+      POSTGRES_MULTIPLE_DATABASES: parking_db,usuarios_db,zonas_db,audit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+    networks:
+      - parking-network
+
+  rabbitmq:
+    build:
+      context: ./docker/rabbitmq
+      dockerfile: Dockerfile
+    container_name: parking-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - parking-network
+
+
+
+
+  # Kong API Gateway
+  kong:
+    build:
+      context: ./docker/kong
+      dockerfile: Dockerfile
+    container_name: parking-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    volumes:
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml
+    networks:
+      - parking-network
+    depends_on:
+      - ms-usuarios-roles-oauth
+      - ms-zonas-espacios
+      - ms-vehiculos
+      - ms-tickets
+      - ms-audit
+
+  # Microservicio de Usuarios con OAuth
+  ms-usuarios-roles-oauth:
+    build:
+      context: ./App/ms-usuarios-roles-oauth
+      dockerfile: Dockerfile
+    container_name: ms-usuarios-roles-oauth
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/usuarios_db
+      SPRING_DATASOURCE_USERNAME: postgrest
+      SPRING_DATASOURCE_PASSWORD: qwerty12
+      OAUTH_SERVER_URL: http://localhost:8082
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: audit-exchange
+    networks:
+      - parking-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Microservicio de Zonas y Espacios
+  ms-zonas-espacios:
+    build:
+      context: ./App/ms-zonas-espacios
+      dockerfile: Dockerfile
+    container_name: ms-zonas-espacios
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zonas_db
+      DB_USERNAME: postgrest
+      DB_PASSWORD: qwerty12
+      JWK_SET_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: audit-exchange
+    networks:
+      - parking-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Microservicio de Vehículos
+  ms-vehiculos:
+    build:
+      context: ./App/ms-vehiculos
+      dockerfile: Dockerfile
+    container_name: ms-vehiculos
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: postgrest
+      DB_PORT: 5432
+      DB_USUARIO: postgrest
+      DB_CONTRASENA: qwerty12
+      DB_NOMBRE: parking_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: audit-exchange
+      RABBITMQ_ROUTING_KEY: audit.vehiculo.create
+      JWKS_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+    networks:
+      - parking-network
+    depends_on:
+      - postgres
+      - rabbitmq
+      - ms-usuarios-roles-oauth
+
+  # Microservicio de Auditoría
+  ms-audit:
+    build:
+      context: ./App/ms-audit
+      dockerfile: Dockerfile
+    container_name: ms-audit
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: postgrest
+      DB_PORT: 5432
+      DB_USER: postgrest
+      DB_PASSWORD: qwerty12
+      DB_NAME: audit_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: audit-exchange
+      RABBITMQ_QUEUE: audit-queue
+      JWKS_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+    networks:
+      - parking-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Microservicio de Tickets
+  ms-tickets:
+    build:
+      context: ./App/ms-tickets
+      dockerfile: Dockerfile
+    container_name: ms-tickets
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DB_HOST: postgrest
+      DB_PORT: 5432
+      DB_USUARIO: postgrest
+      DB_CONTRASENA: qwerty12
+      DB_NOMBRE: parking_db
+      MS_PERSONAS: http://ms-usuarios-roles-oauth:8082/api/users
+      MS_VEHICULOS: http://ms-vehiculos:3000/vehiculo
+      MS_ZONAS: http://ms-zonas-espacios:8081/api/espacios
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_EXCHANGE: audit-exchange
+      RABBITMQ_ROUTING_KEY: audit.ticket.create
+      JWKS_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+    networks:
+      - parking-network
+    depends_on:
+      - postgres
+      - rabbitmq
+      - ms-usuarios-roles-oauth
+      - ms-vehiculos
+      - ms-zonas-espacios
+
+networks:
+  parking-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-vehiculos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ms-vehiculos
+  template:
+    metadata:
+      labels:
+        app: ms-vehiculos
+    spec:
+      containers:
+        - name: ms-vehiculos
+          image: parking/ms-vehiculos:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NOMBRE
+              value: parking_db
+            - name: DB_USUARIO
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_USER
+            - name: DB_CONTRASENA
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWKS_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: JWKS_URI
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_EXCHANGE
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_EXCHANGE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-vehiculos
+spec:
+  selector:
+    app: ms-vehiculos
+  ports:
+    - port: 3000
+      targetPort: 3000

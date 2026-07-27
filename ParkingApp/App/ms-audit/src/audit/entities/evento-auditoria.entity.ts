@@ -1,0 +1,34 @@
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity({ name: 'evento_auditoria' })
+export class EventoAuditoria {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'varchar', length: 50, default: 'default' })
+  tenantId!: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  servicio!: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  accion!: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  entidad!: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  datos?: Record<string, any>;
+
+  @Column({ type: 'varchar', length: 100 })
+  usuario!: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  ip!: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  mac!: string;
+
+  @Column({ type: 'timestamp' })
+  timestamp!: Date;
+}

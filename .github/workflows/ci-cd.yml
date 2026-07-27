@@ -1,0 +1,252 @@
+name: CI/CD - Parking SaaS
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - dev
+      - test
+  pull_request:
+    branches:
+      - master
+      - main
+      - test
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to Kubernetes
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  java:
+    name: Java tests and Sonar
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ms-usuarios-roles-oauth
+            path: ParkingApp/App/ms-usuarios-roles-oauth
+          - name: ms-zonas-espacios
+            path: ParkingApp/App/ms-zonas-espacios
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: maven
+
+      - name: Test
+        working-directory: ${{ matrix.path }}
+        run: mvn -B test
+
+      - name: SonarCloud
+        if: env.SONAR_TOKEN != ''
+        working-directory: ${{ matrix.path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.projectKey=${{ github.repository_owner }}_${{ matrix.name }}
+          -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+
+  node:
+    name: NestJS tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ms-vehiculos
+            path: ParkingApp/App/ms-vehiculos
+          - name: ms-tickets
+            path: ParkingApp/App/ms-tickets
+          - name: ms-audit
+            path: ParkingApp/App/ms-audit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        working-directory: ${{ matrix.path }}
+        run: npm ci || npm install
+
+      - name: Build
+        working-directory: ${{ matrix.path }}
+        run: npm run build
+
+      - name: Test
+        working-directory: ${{ matrix.path }}
+        run: npm run test -- --coverage
+
+  frontend:
+    name: Frontend validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: JS syntax check
+        run: node --check Backend/Monitoreo/app.js
+
+  sonarcloud:
+    name: SonarCloud monorepo scan
+    runs-on: ubuntu-latest
+    needs:
+      - java
+      - node
+      - frontend
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.sources=ParkingApp/App,Backend/Monitoreo
+            -Dsonar.exclusions=**/target/**,**/node_modules/**,**/dist/**,**/*.class
+
+  docker:
+    name: Build and publish Docker images
+    runs-on: ubuntu-latest
+    needs:
+      - java
+      - node
+      - frontend
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: ms-usuarios-roles-oauth
+            context: ParkingApp/App/ms-usuarios-roles-oauth
+          - image: ms-zonas-espacios
+            context: ParkingApp/App/ms-zonas-espacios
+          - image: ms-vehiculos
+            context: ParkingApp/App/ms-vehiculos
+          - image: ms-tickets
+            context: ParkingApp/App/ms-tickets
+          - image: ms-audit
+            context: ParkingApp/App/ms-audit
+          - image: frontend
+            context: Backend/Monitoreo
+          - image: kong
+            context: ParkingApp/docker/kong
+          - image: rabbitmq
+            context: ParkingApp/docker/rabbitmq
+          - image: postgres
+            context: ParkingApp/docker/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:latest
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs:
+      - docker
+      - sonarcloud
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+
+      - name: Render image repository
+        shell: bash
+        run: |
+          find ParkingApp/k8s -name '*.yaml' -print0 | xargs -0 sed -i "s|ghcr.io/OWNER/REPOSITORY|${IMAGE_PREFIX}|g"
+
+      - name: Apply manifests
+        run: kubectl apply -k k8s
+
+  telegram:
+    name: Telegram notification
+    runs-on: ubuntu-latest
+    needs:
+      - java
+      - node
+      - frontend
+      - sonarcloud
+      - docker
+      - deploy
+    if: always()
+    steps:
+      - name: Build message
+        id: msg
+        shell: bash
+        run: |
+          STATUS="success"
+          for result in "${{ needs.java.result }}" "${{ needs.node.result }}" "${{ needs.frontend.result }}" "${{ needs.sonarcloud.result }}" "${{ needs.docker.result }}" "${{ needs.deploy.result }}"; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              STATUS="failure"
+            fi
+          done
+          echo "text=CI/CD ${STATUS} - repo ${{ github.repository }} - branch ${{ github.ref_name }} - commit ${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Send Telegram message
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+            -d text="${{ steps.msg.outputs.text }}"
