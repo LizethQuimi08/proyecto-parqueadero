@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-zonas-espacios
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ms-zonas-espacios
+  template:
+    metadata:
+      labels:
+        app: ms-zonas-espacios
+    spec:
+      containers:
+        - name: ms-zonas-espacios
+          image: parking/ms-zonas-espacios:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/zonas_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWK_SET_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: JWK_SET_URI
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_EXCHANGE
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_EXCHANGE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-zonas-espacios
+spec:
+  selector:
+    app: ms-zonas-espacios
+  ports:
+    - port: 8081
+      targetPort: 8081

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parking SaaS</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="app.css" />
+</head>
+
+<body>
+    <main id="loginView" class="login-screen">
+        <section class="login-shell">
+            <section class="login-panel">
+                <div class="login-ticket-strip" aria-hidden="true">
+                    <span>Ticket #</span>
+                    <strong>ACCESS-2026</strong>
+                </div>
+
+                <div class="brand-row">
+                    <div class="brand-mark" id="loginBrandMark">SA</div>
+                    <div>
+                        <p class="eyebrow">Acceso seguro</p>
+                        <h1 id="loginTenantName">Parking SaaS</h1>
+                    </div>
+                </div>
+
+                <p class="login-copy">
+                    Ingrese con su usuario y contrasena. La plataforma abrira automaticamente el entorno asignado a su cuenta.
+                </p>
+
+                <div class="ticket-summary">
+                    <span id="tenantPlan">Acceso centralizado</span>
+                    <strong id="tenantLocation">Redireccion automatica por tenant</strong>
+                    <small id="tenantActualLogin"></small>
+                </div>
+
+                <div class="form-grid">
+                    <label>
+                        <span>Usuario</span>
+                        <input id="usernameLogin" placeholder="Ingrese su usuario" autocomplete="username" />
+                    </label>
+
+                    <label>
+                        <span>Contrasena</span>
+                        <input id="passwordLogin" type="password" placeholder="Ingrese su clave" autocomplete="current-password" />
+                    </label>
+                </div>
+
+                <button class="primary-action" onclick="iniciarSesion()">Ingresar</button>
+            </section>
+        </section>
+    </main>
+
+    <main id="dashboardView" class="app-shell hidden">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-mark small" id="sidebarBrandMark">P1</div>
+                <div>
+                    <strong id="sidebarTenantName">Parking SaaS</strong>
+                    <span id="tenantActivo">tenant</span>
+                    <small id="rolActivo" class="role-chip">--</small>
+                </div>
+            </div>
+
+            <nav class="nav-list" aria-label="Modulos">
+                <button class="nav-item active" data-view="dashboard" onclick="cambiarVista('dashboard')"><span>Dashboard</span><i>▦</i></button>
+                <button class="nav-item super-only hidden" data-view="empresas" onclick="cambiarVista('empresas')"><span>Empresas</span><i>▤</i></button>
+                <button class="nav-item" data-view="usuarios" onclick="cambiarVista('usuarios')"><span>Usuarios</span><i>◫</i></button>
+                <button class="nav-item admin-only" data-view="roles" onclick="cambiarVista('roles')"><span>Roles</span><i>◩</i></button>
+                <button class="nav-item" data-view="vehiculos" onclick="cambiarVista('vehiculos')"><span>Vehiculos</span><i>▭</i></button>
+                <button class="nav-item" data-view="zonas" onclick="cambiarVista('zonas')"><span>Zonas y espacios</span><i>▧</i></button>
+                <button class="nav-item" data-view="tickets" onclick="cambiarVista('tickets')"><span>Tickets</span><i>▱</i></button>
+                <button class="nav-item admin-only" data-view="auditoria" onclick="cambiarVista('auditoria')"><span>Auditoria</span><i>≡</i></button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span>Sesion</span>
+                <strong id="usuarioActivo">--</strong>
+                <button onclick="cerrarSesion()">Salir</button>
+            </div>
+        </aside>
+
+        <section class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow" id="tenantEyebrow">Operacion en tiempo real</p>
+                    <h1 id="activeSectionTitle">Dashboard de ocupacion</h1>
+                </div>
+
+                <div class="topbar-actions">
+                    <span id="totalEspacios" class="metric-pill">Cargando...</span>
+                    <span id="statusConexion" class="connection-pill">
+                        <span id="indicator"></span>
+                        <span id="statusText">Conectado</span>
+                    </span>
+                </div>
+            </header>
+
+            <section id="dashboardSection" class="view-section">
+                <div class="scope-banner">
+                    <div>
+                        <strong id="scopeTitle">Alcance de sesion</strong>
+                        <span id="scopeDescription">Datos aislados por tenant.</span>
+                    </div>
+                    <div class="toolbar-inline">
+                        <select id="dashboardTenantFilter" class="super-only hidden" onchange="aplicarFiltroDashboard()">
+                            <option value="global">Vista global</option>
+                            <option value="empresa1">Empresa 1</option>
+                            <option value="empresa2">Empresa 2</option>
+                        </select>
+                        <select id="dashboardDateRange" onchange="aplicarFiltroDashboard()">
+                            <option value="hoy">Hoy</option>
+                            <option value="semana">7 dias</option>
+                            <option value="mes">30 dias</option>
+                        </select>
+                        <button type="button" onclick="cargarDatos()">Actualizar</button>
+                    </div>
+                </div>
+
+                <div class="tenant-hero">
+                    <div>
+                        <span id="tenantBadge">Empresa</span>
+                        <h2 id="tenantHeroTitle">Centro de control de parqueaderos</h2>
+                        <p id="tenantHeroCopy">Monitoreo operativo, reservas y disponibilidad por tenant.</p>
+                    </div>
+                    <div class="hero-indicator">
+                        <strong id="tenantHeroCode">P1</strong>
+                        <span>Tenant activo</span>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <article class="stat-card available">
+                        <span>Disponibles</span>
+                        <strong id="availableCount">0</strong>
+                    </article>
+                    <article class="stat-card occupied">
+                        <span>Ocupados</span>
+                        <strong id="occupiedCount">0</strong>
+                    </article>
+                    <article class="stat-card reserved">
+                        <span>Reservados</span>
+                        <strong id="reservedCount">0</strong>
+                    </article>
+                    <article class="stat-card maintenance">
+                        <span>Mantenimiento</span>
+                        <strong id="maintenanceCount">0</strong>
+                    </article>
+                </div>
+
+                <div class="operations-grid">
+                    <article class="occupancy-card">
+                        <div class="occupancy-ring" id="occupancyRing">
+                            <strong id="occupancyPercent">0%</strong>
+                            <span>ocupado</span>
+                        </div>
+                        <div>
+                            <h2>Ocupacion actual</h2>
+                            <p id="occupancyDetail">0 de 0 espacios ocupados o reservados</p>
+                            <div class="occupancy-legend">
+                                <span><i class="legend-dot free"></i>Libre</span>
+                                <span><i class="legend-dot busy"></i>Ocupado</span>
+                                <span><i class="legend-dot reserved"></i>Reservado</span>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="flow-card">
+                        <div class="module-header compact">
+                            <div>
+                                <h2>Flujo entrada/salida</h2>
+                                <span>Horas pico</span>
+                            </div>
+                        </div>
+                        <div id="flowChart" class="flow-chart"></div>
+                    </article>
+                </div>
+
+                <div class="ticket-panel">
+                    <div>
+                        <h2>Reserva rapida</h2>
+                        <p>Los datos se usan para generar el ticket del espacio seleccionado.</p>
+                    </div>
+                    <label>
+                        <span>Placa</span>
+                        <input id="placaInput" value="ABC-1234" />
+                    </label>
+                    <label>
+                        <span>DNI</span>
+                        <input id="dniInput" value="1234567890" />
+                    </label>
+                </div>
+
+                <div id="zonasContainer"></div>
+            </section>
+
+            <section id="empresasSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Empresas tenant</h2>
+                        <span>Administracion global SaaS</span>
+                    </div>
+                    <button class="module-action super-only" type="button" onclick="crearTenantRapido()">Crear tenant</button>
+                </div>
+                <div id="empresasContainer" class="tenant-admin-grid"></div>
+            </section>
+
+            <section id="usuariosSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Gestion de usuarios</h2>
+                        <span>RBAC por empresa</span>
+                    </div>
+                    <div class="module-actions">
+                        <input id="usuariosSearch" class="module-search" placeholder="Buscar usuario, DNI, email o rol" oninput="filtrarModuloActual('usuarios')" />
+                        <select id="usuariosTenantFilter" class="super-only hidden" onchange="filtrarModuloActual('usuarios')">
+                            <option value="">Todos los tenants</option>
+                            <option value="global">Global</option>
+                            <option value="empresa1">Empresa 1</option>
+                            <option value="empresa2">Empresa 2</option>
+                        </select>
+                        <select id="usuariosStatusFilter" onchange="filtrarModuloActual('usuarios')">
+                            <option value="">Todos</option>
+                            <option value="activo">Activos</option>
+                            <option value="suspendido">Suspendidos</option>
+                        </select>
+                        <button class="module-action admin-only" type="button" onclick="crearUsuarioRapido()">Nuevo usuario</button>
+                    </div>
+                </div>
+                <div id="usuariosContainer" class="data-grid"></div>
+            </section>
+
+            <section id="rolesSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Roles y parametros</h2>
+                        <span>Permisos operativos por tenant</span>
+                    </div>
+                    <div class="module-actions">
+                        <input id="rolesSearch" class="module-search" placeholder="Buscar rol o permiso" oninput="filtrarModuloActual('roles')" />
+                        <button class="module-action admin-only" type="button" onclick="crearRolRapido()">Nuevo rol</button>
+                    </div>
+                </div>
+                <div id="rolesContainer" class="data-grid"></div>
+            </section>
+
+            <section id="vehiculosSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Gestion de vehiculos</h2>
+                        <span>Catalogo asociado al tenant</span>
+                    </div>
+                    <div class="module-actions">
+                        <input id="vehiculosSearch" class="module-search admin-only" placeholder="Buscar placa, marca o modelo" oninput="filtrarModuloActual('vehiculos')" />
+                        <select id="vehiculosTipoFilter" class="admin-only" onchange="filtrarModuloActual('vehiculos')">
+                            <option value="">Todos los tipos</option>
+                            <option value="auto">Autos</option>
+                            <option value="moto">Motos</option>
+                            <option value="camion">Camiones</option>
+                        </select>
+                        <button class="module-action tenant-admin-only" type="button" onclick="crearVehiculoRapido()">Nuevo vehiculo</button>
+                    </div>
+                </div>
+                <div id="lprPanel" class="lpr-panel"></div>
+                <div id="vehiculosContainer" class="data-grid"></div>
+            </section>
+
+            <section id="zonasSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Zonas y espacios</h2>
+                        <span>Capacidad, estado y disponibilidad</span>
+                    </div>
+                    <div class="module-actions">
+                        <select id="zonasEstadoFilter" onchange="filtrarModuloActual('zonas')">
+                            <option value="">Todos los estados</option>
+                            <option value="DISPONIBLE">Disponibles</option>
+                            <option value="OCUPADO">Ocupados</option>
+                            <option value="RESERVADO">Reservados</option>
+                            <option value="MANTENIMIENTO">Mantenimiento</option>
+                        </select>
+                        <button class="module-action tenant-admin-only" type="button" onclick="crearZonaRapida()">Nueva zona</button>
+                    </div>
+                </div>
+                <div id="zonasResumenContainer" class="data-grid"></div>
+            </section>
+
+            <section id="ticketsSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Tickets</h2>
+                        <span>Entradas, salidas y cobros</span>
+                    </div>
+                    <div class="module-actions">
+                        <select id="ticketsStatusFilter" onchange="filtrarModuloActual('tickets')">
+                            <option value="">Todos</option>
+                            <option value="ACTIVO">Activos</option>
+                            <option value="PAGADO">Pagados</option>
+                            <option value="ANULADO">Anulados</option>
+                            <option value="PERDIDO">Perdidos</option>
+                        </select>
+                        <input id="ticketsSearch" class="module-search" placeholder="Buscar codigo, placa o espacio" oninput="filtrarModuloActual('tickets')" />
+                    </div>
+                </div>
+                <div id="ticketsContainer" class="data-grid"></div>
+            </section>
+
+            <section id="auditoriaSection" class="view-section hidden">
+                <div class="module-header">
+                    <div>
+                        <h2>Auditoria</h2>
+                        <span>Trazabilidad por tenant</span>
+                    </div>
+                    <div class="module-actions">
+                        <input id="auditSearch" class="module-search" placeholder="Buscar actor, evento u origen" oninput="filtrarModuloActual('auditoria')" />
+                        <select id="auditSeverityFilter" onchange="filtrarModuloActual('auditoria')">
+                            <option value="">Toda severidad</option>
+                            <option value="INFO">Info</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="auditContainer" class="audit-timeline"></div>
+            </section>
+
+            <footer class="app-footer">
+                Ultima actualizacion: <span id="lastUpdate">--</span>
+            </footer>
+        </section>
+
+        <div id="toastContainer" class="toast-stack"></div>
+        <div id="zoneModal" class="modal-backdrop hidden" onclick="cerrarModalZona(event)">
+            <section class="zone-modal" role="dialog" aria-modal="true" aria-labelledby="zoneModalTitle">
+                <header class="zone-modal-header">
+                    <div class="zone-modal-title-group">
+                        <div class="brand-mark small" id="zoneModalBrand">SA</div>
+                        <div>
+                            <span id="zoneModalTenant">Tenant</span>
+                            <h2 id="zoneModalTitle">Zona</h2>
+                            <small id="zoneModalMeta">Nivel 1 | Capacidad: 0 espacios</small>
+                        </div>
+                    </div>
+                    <button type="button" aria-label="Cerrar" onclick="cerrarModalZona()">×</button>
+                </header>
+                <div id="zoneModalStats" class="zone-modal-stats"></div>
+                <div id="zoneModalMap" class="zone-modal-map"></div>
+                <footer class="zone-modal-footer">
+                    <div class="modal-legend">
+                        <span><i class="legend-dot free"></i>Disponible</span>
+                        <span><i class="legend-dot busy"></i>Ocupado</span>
+                        <span><i class="legend-dot reserved"></i>Reservado</span>
+                        <span><i class="legend-dot maintenance"></i>Mantenimiento</span>
+                    </div>
+                    <div class="modal-live-info">
+                        <span>LPR monitoreando: 1 camara</span>
+                        <span id="zoneModalUpdated">Ultima actualizacion: hace 10 segundos</span>
+                    </div>
+                </footer>
+            </section>
+        </div>
+        <div id="formModal" class="modal-backdrop hidden" onclick="cerrarFormulario(event)">
+            <section class="form-modal" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
+                <header class="form-modal-header">
+                    <div>
+                        <span id="formModalScope">Formulario</span>
+                        <h2 id="formModalTitle">Nuevo registro</h2>
+                    </div>
+                    <button type="button" aria-label="Cerrar" onclick="cerrarFormulario()">×</button>
+                </header>
+                <form id="dynamicForm" class="dynamic-form"></form>
+            </section>
+        </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

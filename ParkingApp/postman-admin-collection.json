@@ -1,0 +1,547 @@
+{
+  "info": {
+    "_postman_id": "parking-admin-collection",
+    "name": "Parking Admin - Sistema de Parqueadero",
+    "description": "Colección de endpoints para pruebas de administrador del sistema de parqueadero. Incluye autenticación, zonas, espacios, vehículos, tickets y auditoría.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Auth - Login admin",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"1234567890\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Inicia sesión con el usuario admin por defecto. El test script guarda automáticamente el accessToken en la variable de colección 'token'. Las demás requests heredan el auth Bearer automáticamente."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const json = pm.response.json();",
+              "  pm.collectionVariables.set('token', json.accessToken);",
+              "  console.log('Token guardado en variable de colección');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Auth - Registrar usuario",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"person\": {\n    \"dni\": \"2222222222\",\n    \"firstName\": \"Juan\",\n    \"lastName\": \"Perez\",\n    \"email\": \"juan.perez@test.com\",\n    \"phone\": \"0999999999\",\n    \"nationality\": \"Ecuatoriana\"\n  },\n  \"username\": \"jperez\",\n  \"password\": \"12345678\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Registra un nuevo usuario y le asigna el rol ADMIN automáticamente."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Zonas - Listar todas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/zonas",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "zonas"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Zonas - Crear zona",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Zona Nueva\",\n  \"tipo\": \"GENERAL\",\n  \"capacidad\": 10,\n  \"descripcion\": \"Zona creada desde Postman\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/zonas",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "zonas"]
+        },
+        "description": "Actualiza la variable ZONA_ID con el id de la zona creada."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Zonas - Ver por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/zonas/{{zonaId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "zonas", "{{zonaId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5a. Zonas - Editar zona",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Zona Editada\",\n  \"tipo\": \"GENERAL\",\n  \"capacidad\": 15,\n  \"descripcion\": \"Zona editada desde Postman\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/zonas/{{zonaId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "zonas", "{{zonaId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5b. Zonas - Borrar zona",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/zonas/{{zonaId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "zonas", "{{zonaId}}"]
+        },
+        "description": "Elimina la zona de forma logica. No se puede eliminar si tiene espacios asociados activos."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Espacios - Listar todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/espacios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Espacios - Crear espacio",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idZona\": \"{{zonaId}}\",\n  \"tipo\": \"CUBIERTO\",\n  \"descripcion\": \"Espacio creado desde Postman\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/espacios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios"]
+        },
+        "description": "Actualiza la variable ESPACIO_ID con el id del espacio creado."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Espacios - Cambiar estado",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8000/api/espacios/{{espacioId}}/estado?estado=OCUPADO",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios", "{{espacioId}}", "estado"],
+          "query": [
+            {
+              "key": "estado",
+              "value": "OCUPADO"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8a. Espacios - Editar espacio",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idZona\": \"{{zonaId}}\",\n  \"tipo\": \"ACCESIBLE\",\n  \"descripcion\": \"Espacio editado desde Postman\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/espacios/{{espacioId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios", "{{espacioId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8b. Espacios - Borrar espacio",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/espacios/{{espacioId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios", "{{espacioId}}"]
+        },
+        "description": "Elimina el espacio de forma logica (activo=false)."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Espacios - SSE (Server-Sent Events)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "text/event-stream"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8000/api/espacios/sse?token={{token}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "espacios", "sse"],
+          "query": [
+            {
+              "key": "token",
+              "value": "{{token}}"
+            }
+          ]
+        },
+        "description": "Conexión de streaming para recibir cambios de estado de espacios en tiempo real. El token va por query string porque EventSource no soporta headers personalizados."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Vehiculos - Crear Auto",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tipo\": \"Auto\",\n  \"datos\": {\n    \"placa\": \"POS-1234\",\n    \"marca\": \"Toyota\",\n    \"modelo\": \"Corolla\",\n    \"color\": \"Blanco\",\n    \"anio\": 2024,\n    \"clasificacion\": \"Sedan\",\n    \"numeroPuertas\": 4,\n    \"capacidadMaletero\": 400\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/vehiculo",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["vehiculo"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11. Vehiculos - Crear Moto",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tipo\": \"Moto\",\n  \"datos\": {\n    \"placa\": \"MOT-1234\",\n    \"marca\": \"Yamaha\",\n    \"modelo\": \"FZ\",\n    \"color\": \"Negro\",\n    \"anio\": 2023,\n    \"clasificacion\": \"Motocicleta\",\n    \"cilindraje\": 250\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/vehiculo",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["vehiculo"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12. Vehiculos - Crear Camioneta",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tipo\": \"Camioneta\",\n  \"datos\": {\n    \"placa\": \"CAM-1234\",\n    \"marca\": \"Ford\",\n    \"modelo\": \"Ranger\",\n    \"color\": \"Azul\",\n    \"anio\": 2022,\n    \"clasificacion\": \"Pickup\",\n    \"capacidadCarga\": 1200,\n    \"numeroEjes\": 2\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/vehiculo",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["vehiculo"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "13. Vehiculos - Listar todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/vehiculo",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["vehiculo"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "14. Tickets - Crear ticket (reservar)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"placa\": \"POS-1234\",\n  \"dni\": \"1234567890\",\n  \"idEspacio\": \"{{espacioId}}\",\n  \"nombreZona\": \"Zona Nueva\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/tickets",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["tickets"]
+        },
+        "description": "Crea un ticket de reserva. Actualiza TICKET_ID con el id del ticket creado."
+      },
+      "response": []
+    },
+    {
+      "name": "15. Tickets - Listar todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/tickets",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["tickets"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "16. Tickets - Cerrar ticket",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"valorRecaudado\": 5\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/tickets/{{ticketId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["tickets", "{{ticketId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "17. Audit - Listar eventos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/audit",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "audit"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "18. Usuarios - Listar usuarios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/users",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "users"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "19. Usuarios - Crear usuario",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"person\": {\n    \"dni\": \"3333333333\",\n    \"firstName\": \"Maria\",\n    \"lastName\": \"Garcia\",\n    \"email\": \"maria.garcia@test.com\",\n    \"phone\": \"0888888888\",\n    \"nationality\": \"Ecuatoriana\"\n  },\n  \"username\": \"mgarcia\",\n  \"password\": \"12345678\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/users",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "users"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "zonaId",
+      "value": ""
+    },
+    {
+      "key": "espacioId",
+      "value": ""
+    },
+    {
+      "key": "ticketId",
+      "value": ""
+    }
+  ]
+}

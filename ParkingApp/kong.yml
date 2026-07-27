@@ -1,0 +1,155 @@
+_format_version: "3.0"
+
+services:
+  # Microservicio de Usuarios con OAuth
+  - name: usuarios-service
+    url: http://ms-usuarios-roles-oauth:8082
+    routes:
+      - name: auth-route
+        paths:
+          - /api/auth
+        strip_path: false
+        # Auth endpoints publicos para login y registro
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 60
+              policy: local
+
+      - name: usuarios-route
+        paths:
+          - /api/users
+          - /api/roles
+          - /api/tenants
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+  # Microservicio de Zonas y Espacios
+  - name: zonas-espacios-service
+    url: http://ms-zonas-espacios:8081
+    routes:
+      - name: zonas-route
+        paths:
+          - /api/zonas
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+      - name: espacios-route
+        paths:
+          - /api/espacios
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+      - name: espacios-sse-route
+        paths:
+          - /api/espacios/sse
+        strip_path: false
+        # Ruta mas especifica que /api/espacios; se resuelve primero por Kong
+        # SSE publico en Kong; el backend valida el token por query string
+
+  # Microservicio de Vehiculos
+  - name: vehiculos-service
+    url: http://ms-vehiculos:3000
+    routes:
+      - name: vehiculos-route
+        paths:
+          - /vehiculo
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+  # Microservicio de Tickets
+  - name: tickets-service
+    url: http://ms-tickets:3002
+    routes:
+      - name: tickets-route
+        paths:
+          - /tickets
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+  # Microservicio de Auditoria
+  - name: audit-service
+    url: http://ms-audit:3001
+    routes:
+      - name: audit-route
+        paths:
+          - /api/audit
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+
+consumers:
+  - username: oauth-issuer
+    jwt_secrets:
+      - key: http://localhost:8082
+        algorithm: RS256
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtmw0BlM9B3gSeTfqJHx+
+          QijZSubfN4peLUv3YqyH4WJkDHw/XLdG4KoJZFzLjGZNPI/E/qeiK8qDm2FCHZZ5
+          FTqT8yITjZElYXIwPAbD5BqPR6R+syxncd7woEnGBhTDhASMx9NSsvgVoyR8EE2X
+          PfHcmNM7sMi9ARdwZxh24RJWUUuyUWtkk36fzXDG+MCf3yq/1b36usbz6EQ/d153
+          1VMrArcI3XPe4+tAPgDK7aaILDQgvPUSj9dLRxuy3PP0eBFmF85ftA2Omrl/88kH
+          1JdfaDkovnlfkduNJpwFi4Wp8pwrUxLUH59aUvkFLXwR9RNIqNAqFNkCiR7LBnlW
+          LQIDAQAB
+          -----END PUBLIC KEY-----
+
+plugins:
+  # CORS Plugin
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - Authorization
+        - X-Tenant-ID
+      exposed_headers:
+        - X-Total-Count
+      max_age: 3600
+
+  - name: rate-limiting
+    config:
+      minute: 300
+      policy: local
+
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - X-Gateway:Kong

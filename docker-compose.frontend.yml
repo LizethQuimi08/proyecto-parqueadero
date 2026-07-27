@@ -1,0 +1,8 @@
+services:
+  frontend:
+    build:
+      context: ./Backend/Monitoreo
+      dockerfile: Dockerfile
+    container_name: parking-frontend
+    ports:
+      - "8080:80"

@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-usuarios-roles-oauth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-usuarios-roles-oauth
+  template:
+    metadata:
+      labels:
+        app: ms-usuarios-roles-oauth
+    spec:
+      containers:
+        - name: ms-usuarios-roles-oauth
+          image: parking/ms-usuarios-roles-oauth:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/usuarios_db
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: POSTGRES_PASSWORD
+            - name: OAUTH_SERVER_URL
+              value: http://ms-usuarios-roles-oauth:8082
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-secrets
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_EXCHANGE
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-config
+                  key: RABBITMQ_EXCHANGE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-usuarios-roles-oauth
+spec:
+  selector:
+    app: ms-usuarios-roles-oauth
+  ports:
+    - port: 8082
+      targetPort: 8082
