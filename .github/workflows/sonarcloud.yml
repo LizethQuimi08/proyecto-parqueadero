@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - main
-      - develop
-      - feature-quimi_01
+      - dev
+      - test
+      - "feature/**"
 
   pull_request:
     types:
@@ -38,7 +39,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=lizethquimi08
-            -Dsonar.projectKey=REEMPLAZAR_PROJECT_KEY
+            -Dsonar.projectKey=LizethQuimi08_proyecto-parqueadero
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.sources=ParkingApp/App
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/coverage/**,**/target/**
