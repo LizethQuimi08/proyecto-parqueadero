@@ -1,0 +1,47 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature-quimi_01
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonarcloud:
+    name: SonarQube Cloud Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analizar con SonarQube Cloud
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=lizethquimi08
+            -Dsonar.projectKey=REEMPLAZAR_PROJECT_KEY
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=ParkingApp/App
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/coverage/**,**/target/**
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=600
