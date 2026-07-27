@@ -5,8 +5,8 @@
  */
 window.API_BASE = window.API_BASE || (
     window.location.protocol === 'file:'
-        ? 'http://localhost:30080'
+        ? 'http://localhost:8000'
         : window.location.port === '8080'
-            ? 'http://localhost:30080'
+            ? 'http://localhost:8000'
             : window.location.origin
 );
