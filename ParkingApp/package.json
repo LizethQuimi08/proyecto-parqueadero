@@ -1,0 +1,34 @@
+{
+  "name": "parking-app",
+  "version": "1.0.0",
+  "description": "Sistema de Parqueadero - Microservicios",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "cd App/ms-vehiculos && npm install && cd ../ms-tickets && npm install",
+    "start:vehiculos": "cd App/ms-vehiculos && npm run start:dev",
+    "start:tickets": "cd App/ms-tickets && npm run start:dev",
+    "start:java": "cd App/ms-usuarios-roles-oauth && ./mvnw spring-boot:run & cd ../ms-zonas-espacios && ./mvnw spring-boot:run",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "docker:logs": "docker-compose logs -f",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "parking",
+    "microservices",
+    "spring-boot",
+    "nestjs",
+    "oauth2",
+    "kong"
+  ],
+  "author": "Parking Team",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "workspaces": [
+    "App/ms-vehiculos",
+    "App/ms-tickets"
+  ]
+}

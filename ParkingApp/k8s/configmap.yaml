@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parking-config
+data:
+  POSTGRES_MULTIPLE_DATABASES: parking_db,usuarios_db,zonas_db,audit_db
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_EXCHANGE: audit-exchange
+  RABBITMQ_QUEUE: audit-queue
+  JWKS_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+  JWK_SET_URI: http://ms-usuarios-roles-oauth:8082/.well-known/jwks.json
+  MS_PERSONAS: http://ms-usuarios-roles-oauth:8082/api/users
+  MS_VEHICULOS: http://ms-vehiculos:3000/vehiculo
+  MS_ZONAS: http://ms-zonas-espacios:8081/api/espacios
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+data:
+  init-postgres.sh: |
+    #!/bin/bash
+    set -e
+    for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+        SELECT 'CREATE DATABASE "$db"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db')\gexec
+    EOSQL
+    done
