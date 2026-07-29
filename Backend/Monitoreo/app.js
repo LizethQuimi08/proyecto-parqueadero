@@ -914,6 +914,68 @@ window.reservarEspacio = async (idEspacio, nombreZona) => {
     });
 };
 
+window.crearTicketRapido = async () => {
+    if (isSuperAdmin()) {
+        alert('SUPER_ADMIN solo puede consultar tickets, no crearlos. Ingrese como administrador de la empresa.');
+        return;
+    }
+
+    let espacios = [];
+    try {
+        espacios = await fetchJson(API_ESPACIOS);
+    } catch (error) {
+        alert('No se pudieron cargar los espacios disponibles.');
+        return;
+    }
+
+    const disponibles = (Array.isArray(espacios) ? espacios : []).filter((e) => e.estado === 'DISPONIBLE');
+    if (!disponibles.length) {
+        alert('No hay espacios disponibles en este momento para generar un ticket.');
+        return;
+    }
+
+    const vehiculosReserva = await getAvailableVehiclesForReservation();
+    const vehiculoReserva = vehiculosReserva[0] || null;
+    const placaDefault = vehiculoReserva?.placa || vehiculoReserva?.datos?.placa || getDemoPlateForTenant();
+    const dniDefault = vehiculoReserva?.ownerDni || vehiculoReserva?.datos?.ownerDni || localStorage.getItem('dni') || getDemoDniForSession();
+
+    abrirFormulario({
+        title: 'Nuevo ticket',
+        scope: 'Entrada de vehiculo',
+        fields: [
+            {
+                name: 'idEspacio',
+                label: 'Espacio disponible',
+                type: 'select',
+                required: true,
+                full: true,
+                options: disponibles.map((espacio) => ({
+                    value: espacio.id,
+                    label: `${espacio.nombreZona} - ${espacio.nombre}`,
+                })),
+            },
+            { name: 'placa', label: 'Placa del vehiculo', required: true, value: placaDefault.toUpperCase(), pattern: '[A-Z]{3}-[0-9]{4}' },
+            { name: 'dni', label: 'DNI', required: true, value: dniDefault, pattern: '[0-9]{1,10}' },
+        ],
+        submitText: 'Generar ticket',
+        onSubmit: async (values) => {
+            const espacioSeleccionado = disponibles.find((espacio) => espacio.id === values.idEspacio);
+            const ticket = await fetchJson(API_TICKETS, {
+                method: 'POST',
+                body: JSON.stringify({
+                    placa: values.placa.toUpperCase(),
+                    dni: values.dni,
+                    idEspacio: values.idEspacio,
+                    nombreZona: espacioSeleccionado?.nombreZona || '',
+                }),
+            });
+            showToast(`Ticket generado para ${ticket.placa}.`);
+            await cargarDatos();
+            await cargarModulo('tickets');
+        },
+    });
+};
+
 const calcularTotalReserva = (horas) => (Number(horas) * 1.5).toFixed(2);
 
 window.actualizarTotalReserva = () => {

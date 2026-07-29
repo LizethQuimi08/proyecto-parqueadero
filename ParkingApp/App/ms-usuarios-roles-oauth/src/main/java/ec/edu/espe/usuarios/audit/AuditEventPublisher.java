@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -27,18 +28,29 @@ public class AuditEventPublisher {
                         String accion,
                         Map<String, Object> datos,
                         String routingKey) {
+        publish(request, entidad, accion, datos, routingKey, null);
+    }
+
+    public void publish(HttpServletRequest request,
+                        String entidad,
+                        String accion,
+                        Map<String, Object> datos,
+                        String routingKey,
+                        String tenantId) {
 
         try {
-            Map<String, Object> event = Map.of(
-                    "servicio", "ms_usuarios_roles_oauth",
-                    "accion", accion,
-                    "entidad", entidad,
-                    "datos", datos,
-                    "usuario", getUsuario(request),
-                    "ip", getClientIp(request),
-                    "mac", getServerMac(),
-                    "fecha", LocalDateTime.now().toString()
-            );
+            Map<String, Object> event = new HashMap<>();
+            if (tenantId != null && !tenantId.isBlank()) {
+                event.put("tenantId", tenantId);
+            }
+            event.put("servicio", "ms_usuarios_roles_oauth");
+            event.put("accion", accion);
+            event.put("entidad", entidad);
+            event.put("datos", datos);
+            event.put("usuario", getUsuario(request));
+            event.put("ip", getClientIp(request));
+            event.put("mac", getServerMac());
+            event.put("fecha", LocalDateTime.now().toString());
 
             rabbitTemplate.convertAndSend(exchange, routingKey, event);
 

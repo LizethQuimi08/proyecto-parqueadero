@@ -66,7 +66,7 @@ public class AuthController {
                 "id", user.getId(),
                 "username", user.getUsername(),
                 "email", user.getPerson().getEmail()
-        ), "audit.usuario.create");
+        ), "audit.usuario.create", user.getTenantId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
 }
@@ -94,7 +94,7 @@ public class AuthController {
         auditEventPublisher.publish(httpRequest, "USUARIO", "LOGIN", Map.of(
                 "username", response.getUsername(),
                 "roles", response.getRoles()
-        ), "audit.usuario.login");
+        ), "audit.usuario.login", response.getTenantId());
 
         return ResponseEntity.ok(response);
         }

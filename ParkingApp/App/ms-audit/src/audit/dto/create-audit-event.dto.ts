@@ -18,7 +18,7 @@ export class CreateAuditEventDto {
 
     @IsString()
     @IsNotEmpty()
-    @MinLength(6)
+    @MinLength(5)
     @MaxLength(10)
     @Matches(/^(CREATE|UPDATE|DELETE|LOGIN|LOGOUT)$/,
          { message: 'La acción debe ser CREATE, UPDATE, DELETE, LOGIN o LOGOUT' })

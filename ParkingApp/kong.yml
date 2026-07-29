@@ -139,6 +139,7 @@ plugins:
         - Date
         - Authorization
         - X-Tenant-ID
+        - X-User-DNI
       exposed_headers:
         - X-Total-Count
       max_age: 3600
